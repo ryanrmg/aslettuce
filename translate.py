@@ -12,10 +12,10 @@ from GenerateTrainingSet import GenerateTrainingSet
 
 class Translator():
     def classify(self, gestureData):
-        dataList = gestureData.split(",");
-        dataList.insert(0, "");
-        print dataList;
-        print len(dataList);
+        dataList = gestureData.split(",")
+        dataList.insert(0, "")
+        #print dataList
+        #print len(dataList)
         data =  {
 
         "Inputs": {
@@ -35,10 +35,10 @@ class Translator():
         response = urllib2.urlopen(req)
         result = response.read()
         resultsJSON = json.loads(result)
-        predictedLetter = resultsJSON["Results"]["output1"]["value"]["Values"][0][-1];
-        print predictedLetter
-        confidence = resultsJSON["Results"]["output1"]["value"]["Values"][0][-2];
-        print confidence
+        predictedLetter = resultsJSON["Results"]["output1"]["value"]["Values"][0][-1]
+        #print predictedLetter
+        confidence = resultsJSON["Results"]["output1"]["value"]["Values"][0][-2]
+        #print confidence
         return predictedLetter
 
 

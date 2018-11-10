@@ -32,11 +32,11 @@ class GenerateTrainingSet(Leap.Listener):
         print "Exited"
 
     def doTheThing(self, controller):
-        writeFile = open("/Users/NickBowman/Desktop/trainingSet.csv", "w")
+        writeFile = open("/Users/ryangess/Desktop/asl_lettuce/trainingSet.csv", "w")
         for word in self.words_to_define:
             for i in xrange(0, self.NUM_TRAINING_EXAMPLES):
                 print "Make gesture now for %s" % word
-                time.sleep(1)
+                #time.sleep(1)
                 result = self.captureGesture(controller)
                 writeFile.write(word + ',' + result + '\n')
                 print "Gesture successfully recorded. That was time #%d Next one starts on enter..." % (i+1)
@@ -48,8 +48,8 @@ class GenerateTrainingSet(Leap.Listener):
         ans = ""
         for i in range(0, self.NUM_FRAME_GRABS):
             frameGrab = controller.frame()
-            frames.append(frameGrab);
-            print frameGrab
+            frames.append(frameGrab)
+            #print frameGrab
             time.sleep(0.1)
         previousFrame = None
         sumHands = 0

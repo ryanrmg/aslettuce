@@ -5,14 +5,26 @@
 #   * a FlashingMovingDot subclass of MovingDot that flashes and moves
 
 import random
-from tkinter import *
+from Tkinter import *
+import subprocess
+import urllib2
+import Leap
+import json
+from translate import Translator
+from GenerateTrainingSet import GenerateTrainingSet
+from PIL import *
+#import cv2
+
+
+
+
 
 class Bubble(object):
-    def __init__(self, cx, cy, r, type, speed):
+    def __init__(self, cx, cy, r, letter, speed):
         self.cx = cx
         self.cy = cy
         self.r = r
-        self.type = type
+        self.letter = letter
         self.speed = speed
         self.colour = "white"
         self.ringColour = "dark turquoise"
@@ -36,7 +48,7 @@ class Bubble(object):
         canvas.create_oval(outerLeft, outerUp, outerRight, outerDown, fill = self.colour, outline="")
         canvas.create_oval(innerLeft, innerUp, innerRight, innerDown, fill = self.colour,
                             outline = self.ringColour, width = 10)
-        canvas.create_text(self.cx, self.cy, text=self.type, font = "Helvetica " + str(self.r))
+        canvas.create_text(self.cx, self.cy, text=self.letter, font = "Helvetica " + str(self.r))
 
     def moveBubbleDown(self):
         self.cy += self.speed
@@ -68,37 +80,54 @@ class Bubble(object):
         return self.isOriginalSize
 
     def checkType(self):
-        return self.type
-
-
+        return self.letter
 
 
 # Core animation code
 
 def init(data):
     data.timer = 0
+    data.bubbleTimer = 0
     data.score = 0
+    data.bubbleScore = 10
     data.bubblesMoving = True
     data.bubbleList = [ ]
     data.currentKey = ""
+    data.textTimer = 0
+    data.showText = False
+    data.textType = ""
 
 
 def addBubble(data):
     alphaList = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    type = alphaList[random.randint(0, 25)]
-    startCx = int((data.width*(7/10) +(data.width*(7/10)+data.width//4))//2)
+    letter = alphaList[random.randint(0, 25)]
+    startCx = int((896 + 896 +data.width//4)//2)
     startCy = 0
     startR = data.width//16
 
-    newBubble = Bubble(startCx, startCy, startR, type, 10)
+    newBubble = Bubble(startCx, startCy, startR, letter, 10)
     data.bubbleList.append(newBubble)
 
 def drawBackgroundRect(canvas, data):
-    left = int(data.width*(7/10))
+    left = 896
     top = 0
     size = data.width//4
 
     canvas.create_rectangle(left, top, left+size, data.height, fill="gainsboro", outline ="")
+
+def showScore(canvas, data):
+    canvas.create_text(data.width//18, int(data.height*0.8), text="Score:  " + str(data.score),
+                        font = "Helvetica " + str(data.width//20), anchor=NW)
+
+    if data.bubblesMoving:
+        txt = "Ready?"
+        colour = "spring green"
+    else:
+        txt = "Timer:   " + str(int(data.bubbleScore))
+        colour = "salmon"
+    canvas.create_text(data.width//18, int(data.height*0.72), text=txt,
+                        font = "Helvetica " + str(data.width//30), anchor=NW,
+                        fill=colour)
 
 def checkBubblesStop(data):
     if data.bubbleList[0].getYPos() == 600:
@@ -108,8 +137,15 @@ def checkBubblesStop(data):
         data.bubblesMoving = True
         return False
 
-def checkLeap(data, val):
-    return data.currentKey
+
+def checkLeap():
+    # Create a translation object
+    translator = Translator()
+    gestureListener = GenerateTrainingSet()
+    controller = Leap.Controller()
+    classificationResult = translator.classify(gestureListener.captureGesture(controller))
+    return classificationResult
+
 
 def mousePressed(event, data):
     pass
@@ -119,6 +155,7 @@ def keyPressed(event, data):
     data.currentKey = event.keysym
 
 def timerFired(data):
+    #print(data.showText, data.textTimer, data.textTimer)
     if data.timer == 0:
         addBubble(data)
     data.timer += 0.1
@@ -131,30 +168,58 @@ def timerFired(data):
         for bubble in data.bubbleList:
             bubble.moveBubbleDown()
     else:
+        data.bubbleTimer += 0.1
+        data.bubbleScore -= 0.1
         data.bubbleList[0].makeCheckTrue()
         data.bubbleList[0].changeBubbleColour()
         if data.bubbleList[0].checkOriginalSize() == True:
             data.bubbleList[0].changeBubbleSize()
 
+    if data.showText == True and data.textTimer < 0.9:
+        data.textTimer += 0.1
+    elif data.textTimer >= 0.9:
+        data.textTimer = 0
+        data.showText = False
 
-def checkCurrentBubble(data, val):
-    print(checkLeap(data, val), data.bubbleList[0].checkType())
-    if checkLeap(data, val) == data.bubbleList[0].checkType():
+
+def checkCurrentBubble(data, canvas):
+    print checkLeap(), data.bubbleList[0].checkType()
+    print data.bubbleTimer
+    if checkLeap() == data.bubbleList[0].checkType():
         data.bubbleList[0].changeBubbleColourCorrect()
         data.score += 1
-    else:
+        data.bubblesMoving = True
+        data.bubbleList.pop(0)
+        data.bubbleTimer = 0
+        data.bubbleScore = 10
+        data.textType = "Good"
+        data.showText = True
+    elif int(data.bubbleTimer) == 10:
         data.bubbleList[0].changeBubbleColourIncorrect()
-
+        data.bubblesMoving = True
+        data.bubbleList.pop(0)
+        data.bubbleTimer = 0
+        data.bubbleScore = 10
+        data.textType = "Bad"
+        data.showText = True
 
 
 def redrawAll(canvas, data):
+    showScore(canvas, data)
     checkBubblesStop(data)
     drawBackgroundRect(canvas,data)
     if data.bubblesMoving == False:
-        checkCurrentBubble(data, "x")
+        checkCurrentBubble(data,canvas)
     for bubble in data.bubbleList:
         bubble.draw(canvas)
-    print(checkLeap(data, "x"))
+    #print(checkLeap())
+    if data.showText == True:
+        if data.textType == "Good":
+            canvas.create_text(data.width//3, data.height//3, text="AMAZING",
+                                font = "Helvetica " + str(data.width//10))
+        else:
+            canvas.create_text(data.width//3, data.height//3, text="TOO SLOW!",
+                                font = "Helvetica " + str(data.width//10))
 ####################################
 # use the run function as-is
 ####################################
@@ -189,6 +254,17 @@ def run(width=300, height=300):
     init(data)
     # create the root and the canvas
     root = Tk()
+    # cap = cv2.VideoCapture(0)
+    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
+    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
+    # _, frame = cap.read()
+    # frame = cv2.flip(frame, 1)
+    # cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+    # img = PIL.Image.fromarray(cv2image)
+    # imgtk = ImageTk.PhotoImage(image=img)
+    # canvas.imgtk = imgtk
+    # canvas.configure(image=imgtk)
+    # canvas.after(10, show_frame)
     root.resizable(width=False, height=False) # prevents resizing window
     canvas = Canvas(root, width=data.width, height=data.height)
     canvas.configure(bd=0, highlightthickness=0)
@@ -202,5 +278,6 @@ def run(width=300, height=300):
     # and launch the app
     root.mainloop()  # blocks until window is closed
     print("bye!")
+
 
 run(1280, 720)
