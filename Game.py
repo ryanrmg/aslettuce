@@ -6,16 +6,15 @@
 
 import random
 from Tkinter import *
+import Tkinter as tk
 import subprocess
 import urllib2
 import Leap
 import json
 from translate import Translator
 from GenerateTrainingSet import GenerateTrainingSet
-from PIL import *
-#import cv2
-
-
+from PIL import Image, ImageTk
+import cv2
 
 
 
@@ -67,6 +66,8 @@ class Bubble(object):
         self.r = int(self.r*(1.3))
         self.isOriginalSize = False
 
+    def __repr__(self):
+        return "y=" + str(self.cy)
     def getYPos(self):
         return self.cy
 
@@ -86,7 +87,7 @@ class Bubble(object):
 # Core animation code
 
 def init(data):
-    data.timer = 0
+    data.timer1 = 0
     data.bubbleTimer = 0
     data.score = 0
     data.bubbleScore = 10
@@ -152,15 +153,15 @@ def mousePressed(event, data):
 
 
 def keyPressed(event, data):
-    data.currentKey = event.keysym
+    pass
 
 def timerFired(data):
     #print(data.showText, data.textTimer, data.textTimer)
-    if data.timer == 0:
+    if data.timer1 == 0:
         addBubble(data)
-    data.timer += 0.1
-    data.timer = float('{0:.2f}'.format(data.timer))
-    if data.timer % 3 == 0:
+    data.timer1 += 0.1
+    data.timer1 = float('{0:.2f}'.format(data.timer1))
+    if data.timer1 % 3 == 0:
         if data.bubblesMoving == True:
             addBubble(data)
 
@@ -225,6 +226,20 @@ def redrawAll(canvas, data):
 ####################################
 
 def run(width=300, height=300):
+    cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width/2)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height/2)
+    def show_frame():
+        _, frame = cap.read()
+        frame = cv2.flip(frame, 1)
+        image = cv2.resize(frame, (0,0), fx=0.5, fy=0.5)
+        cv2image = cv2.cvtColor(image, cv2.COLOR_BGR2RGBA)
+        img = Image.fromarray(cv2image)
+        imgtk = ImageTk.PhotoImage(image=img)
+        lmain.imgtk = imgtk
+        lmain.configure(image=imgtk)
+        lmain.after(10, show_frame)
+
     def redrawAllWrapper(canvas, data):
         canvas.delete(ALL)
         canvas.create_rectangle(0, 0, data.width, data.height,
@@ -254,20 +269,11 @@ def run(width=300, height=300):
     init(data)
     # create the root and the canvas
     root = Tk()
-    # cap = cv2.VideoCapture(0)
-    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
-    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
-    # _, frame = cap.read()
-    # frame = cv2.flip(frame, 1)
-    # cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-    # img = PIL.Image.fromarray(cv2image)
-    # imgtk = ImageTk.PhotoImage(image=img)
-    # canvas.imgtk = imgtk
-    # canvas.configure(image=imgtk)
-    # canvas.after(10, show_frame)
     root.resizable(width=False, height=False) # prevents resizing window
     canvas = Canvas(root, width=data.width, height=data.height)
     canvas.configure(bd=0, highlightthickness=0)
+    lmain = tk.Label(root)
+    lmain.pack()
     canvas.pack()
     # set up events
     root.bind("<Button-1>", lambda event:
@@ -275,6 +281,7 @@ def run(width=300, height=300):
     root.bind("<Key>", lambda event:
                             keyPressedWrapper(event, canvas, data))
     timerFiredWrapper(canvas, data)
+    #show_frame()
     # and launch the app
     root.mainloop()  # blocks until window is closed
     print("bye!")

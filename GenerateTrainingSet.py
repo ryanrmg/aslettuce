@@ -1,9 +1,5 @@
 ################################################################################
-# Written by Nicholas Bowman and Nelson Liu                                    #
-# DubHacks 2015                                                                #
-# Last modified 10/18/15                                                       #
-# This class aids a user in creating custom training data for sign language    #
-# translation with the Leap Motion controller.                                 #
+# hack 112 2018
 ################################################################################
 
 import Leap, sys, thread, time
